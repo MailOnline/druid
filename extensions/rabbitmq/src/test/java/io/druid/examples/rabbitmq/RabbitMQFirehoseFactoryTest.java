@@ -44,6 +44,7 @@ public class RabbitMQFirehoseFactoryTest
         true,
         true,
         5,
+        -1,
         10,
         20
     );

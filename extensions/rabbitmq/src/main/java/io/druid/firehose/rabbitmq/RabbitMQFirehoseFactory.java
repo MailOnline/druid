@@ -41,6 +41,8 @@ import net.jodah.lyra.retry.RetryPolicy;
 import net.jodah.lyra.util.Duration;
 
 import java.io.IOException;
+import java.util.HashMap;
+import java.util.Map;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.LinkedBlockingQueue;
 
@@ -73,6 +75,7 @@ import java.util.concurrent.LinkedBlockingQueue;
  *       "durable": "true",                   # Whether the queue should be durable. Default: 'false'
  *       "exclusive": "false",                # Whether the queue should be exclusive. Default: 'false'
  *       "autoDelete": "false",               # Whether the queue should auto-delete on disconnect. Default: 'false'
+ *       "maxLength": "-1",                   # 'x-max-length' AMQP argument. Default: '-1', unbounded.
  *
  *       "maxRetries": "10",                  # The max number of reconnection retry attempts
  *       "retryIntervalSeconds": "1",         # The reconnection interval
@@ -150,6 +153,7 @@ public class RabbitMQFirehoseFactory implements FirehoseFactory<StringInputRowPa
     boolean durable = config.isDurable();
     boolean exclusive = config.isExclusive();
     boolean autoDelete = config.isAutoDelete();
+    long maxLength = config.getMaxLength();
 
     final Connection connection = Connections.create(lyraOptions, lyraConfig);
 
@@ -165,7 +169,16 @@ public class RabbitMQFirehoseFactory implements FirehoseFactory<StringInputRowPa
     );
 
     final Channel channel = connection.createChannel();
-    channel.queueDeclare(queue, durable, exclusive, autoDelete, null);
+
+
+    Map<String, Object> arguments = null;
+
+    if (maxLength != -1) {
+      arguments = new HashMap<>();
+      arguments.put("x-max-length", maxLength);
+    }
+
+    channel.queueDeclare(queue, durable, exclusive, autoDelete, arguments);
     channel.queueBind(queue, exchange, routingKey);
     channel.addShutdownListener(
         new ShutdownListener()

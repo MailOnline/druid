@@ -26,13 +26,14 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 public class RabbitMQFirehoseConfig
 {
   // Lyra (auto reconnect) properties
+  private static final int defaultMaxLength = -1;
   private static final int defaultMaxRetries = 100;
   private static final int defaultRetryIntervalSeconds = 2;
   private static final long defaultMaxDurationSeconds = 5 * 60;
 
   public static RabbitMQFirehoseConfig makeDefaultConfig()
   {
-    return new RabbitMQFirehoseConfig(null, null, null, false, false, false, 0, 0, 0);
+    return new RabbitMQFirehoseConfig(null, null, null, false, false, false, 0, -1, 0, 0);
   }
 
   private final String queue;
@@ -41,6 +42,7 @@ public class RabbitMQFirehoseConfig
   private final boolean durable;
   private final boolean exclusive;
   private final boolean autoDelete;
+  private final long maxLength;
   private final int maxRetries;
   private final int retryIntervalSeconds;
   private final long maxDurationSeconds;
@@ -54,6 +56,7 @@ public class RabbitMQFirehoseConfig
       @JsonProperty("exclusive") boolean exclusive,
       @JsonProperty("autoDelete") boolean autoDelete,
       @JsonProperty("maxRetries") int maxRetries,
+      @JsonProperty("maxLength") long maxLength,
       @JsonProperty("retryIntervalSeconds") int retryIntervalSeconds,
       @JsonProperty("maxDurationSeconds") long maxDurationSeconds
   )
@@ -64,6 +67,7 @@ public class RabbitMQFirehoseConfig
     this.durable = durable;
     this.exclusive = exclusive;
     this.autoDelete = autoDelete;
+    this.maxLength = maxLength == 0 ? defaultMaxLength : maxLength;
 
     this.maxRetries = maxRetries == 0 ? defaultMaxRetries : maxRetries;
     this.retryIntervalSeconds = retryIntervalSeconds == 0 ? defaultRetryIntervalSeconds : retryIntervalSeconds;
@@ -104,6 +108,12 @@ public class RabbitMQFirehoseConfig
   public boolean isAutoDelete()
   {
     return autoDelete;
+  }
+
+  @JsonProperty
+  public long getMaxLength()
+  {
+    return maxLength;
   }
 
   @JsonProperty
@@ -151,6 +161,9 @@ public class RabbitMQFirehoseConfig
     if (maxRetries != that.maxRetries) {
       return false;
     }
+    if (maxLength != that.maxLength) {
+      return false;
+    }
     if (retryIntervalSeconds != that.retryIntervalSeconds) {
       return false;
     }
@@ -178,6 +191,7 @@ public class RabbitMQFirehoseConfig
     result = 31 * result + (autoDelete ? 1 : 0);
     result = 31 * result + maxRetries;
     result = 31 * result + retryIntervalSeconds;
+    result = 31 * result + (int) (maxLength ^ (maxLength >>> 32));
     result = 31 * result + (int) (maxDurationSeconds ^ (maxDurationSeconds >>> 32));
     return result;
   }
